@@ -42,7 +42,7 @@ You can install it using **Swift Package Manager** directly from GitHub.
 1. Open **Xcode > File > Add Packages…**
 2. Enter the repository URL:
    ```swift
-   https://github.com/yourname/AIAutoImage.git
+   https://github.com/WeTechnoMind/AIAutoImage.git
    ```
    
 3. Select **Version: 1.0.0**
@@ -56,7 +56,7 @@ If you’re using SPM manually:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/yourname/AIAutoImage.git", from: "1.0.0")
+    .package(url: "https://github.com/WeTechnoMind/AIAutoImage.git", from: "1.0.0")
 ]
  ```
 ## Quick Start

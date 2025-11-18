@@ -5,7 +5,7 @@
 
 ![AIAutoImage](https://img.shields.io/badge/AIAutoImage-Next--Gen%20AI%20Image%20Pipeline%20for%20iOS-red)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?style=flat-square)
-![SPM Release](https://img.shields.io/github/v/release/Dhiiren/AIAutoImage?label=SPM&color=blue&style=flat-square)
+![SPM Release](https://img.shields.io/github/v/release/WeTechnoMind/AIAutoImage?label=SPM&color=blue&style=flat-square)
 ![Platform iOS](https://img.shields.io/badge/platform-iOS%2015%2B-blue?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![Swift Package Manager](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-orange?logo=swift)

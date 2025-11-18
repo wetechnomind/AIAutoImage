@@ -1,5 +1,5 @@
 
-<img width="1366" height="524" alt="ChatGPT Image Nov 18, 2025, 12_55_06 PM" src="https://github.com/user-attachments/assets/2f3c8faa-04ba-4cca-b6ee-b6e819603d67" />
+<img width="1366" height="524" alt="img new" src="https://github.com/user-attachments/assets/cf122e76-3e7c-4931-8249-5bcf990fba39" />
 
 # AIAutoImage — The Next-Gen AI Image Pipeline for iOS
 

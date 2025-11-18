@@ -250,6 +250,12 @@ Whether it's bug reports, feature requests, performance improvements, or documen
 
 All source code is licensed under the [MIT License](https://github.com/SDWebImage/SDWebImage/blob/master/LICENSE).
 
+---
+
+##  High Level Diagram
+
+<img width="1024" height="1536" alt="High Level Diagram" src="https://github.com/user-attachments/assets/086f74b7-25fd-4ccb-b246-6668b43ff8f9" />
+
 
 
 

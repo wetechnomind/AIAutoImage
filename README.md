@@ -45,7 +45,7 @@ You can install it using **Swift Package Manager** directly from GitHub.
    https://github.com/WeTechnoMind/AIAutoImage.git
    ```
    
-3. Select **Version: 1.0.0**
+3. Select **Version: 1.3.0**
 4. Add the package to your app target
 
 ---
@@ -56,7 +56,7 @@ If you’re using SPM manually:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/WeTechnoMind/AIAutoImage.git", from: "1.0.0")
+    .package(url: "https://github.com/WeTechnoMind/AIAutoImage.git", from: "1.3.0")
 ]
  ```
 ## Quick Start
@@ -73,8 +73,9 @@ Below are essential examples to get you started with AIAutoImage.
 
 ```swift
 import AIAutoImage
+internal import AIAutoImageCore
 
-let url = URL(string: "https://example.com/image.jpg")!
+let url = URL(string: "https://picsum.photos/id/1001/800/800")!
 
 let imageView = UIImageView()
 imageView.contentMode = .scaleAspectFill
@@ -93,7 +94,7 @@ internal import AIAutoImageCore
 struct ContentView: View {
     var body: some View {
         AIImage(
-            url: URL(string: "https://example.com/photo.png")!,
+            url: URL(string: "https://picsum.photos/id/1001/800/800")!,
             placeholder: {
                 ProgressView()
             }
@@ -122,7 +123,7 @@ class ViewController: UIViewController {
         view.addSubview(imageView)
 
         imageView.ai_setImage(
-            url: URL(string: "https://example.com/landscape.jpg")!
+            url: URL(string: "https://picsum.photos/id/1001/800/800")!
         )
     }
 }
@@ -133,7 +134,7 @@ class ViewController: UIViewController {
 
 ```swift
 import AIAutoImage
-import AIAutoImageCore
+internal import AIAutoImageCore
 
     let url = URL(string: "https://picsum.photos/id/1001/800/800")!
     let request = AIImageRequest(url: url)
@@ -170,7 +171,7 @@ import AIAutoImageCore
 ```swift
 import AIAutoImage
 import UIKit
-import AIAutoImageCore
+internal import AIAutoImageCore
 
 let animatedView = AIAnimatedImageView(frame: CGRect(x: 0, y: 0, width: 300, height: 220))
 
@@ -191,8 +192,9 @@ Task {
 
 ```swift
 import AIAutoImage
+internal import AIAutoImageCore
 
-let url = URL(string: "https://example.com/city.jpg")!
+let url = URL(string: "https://picsum.photos/id/1001/800/800")!
 
 Task {
     let data = try await AIImagePipeline.shared.fetchData(for: AIImageRequest(url: url))
@@ -210,6 +212,7 @@ Task {
 
 ```swift
 import AIAutoImage
+internal import AIAutoImageCore
 
 struct InvertColorPlugin: AIPlugin {
     let name = "InvertColor"

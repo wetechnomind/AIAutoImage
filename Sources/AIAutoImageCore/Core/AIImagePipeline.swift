@@ -250,3 +250,21 @@ public final class AIImagePipeline: @unchecked Sendable {
         Task { await loader.cancel(url) }
     }
 }
+// MARK: - Simple Data Fetch API
+// ---------------------------------
+
+public extension AIImagePipeline {
+
+    /// A simple data fetch wrapper.
+    /// Does NOT run decode/transform/render pipeline.
+    /// Purely downloads raw bytes using existing loader + network.
+    func fetchData(for request: AIImageRequest) async throws -> Data {
+        let urlRequest = await request.makeURLRequest()
+        let data = try await loader.fetch(
+            request: urlRequest,
+            network: network,
+            config: AIImageConfig.shared
+        )
+        return data
+    }
+}

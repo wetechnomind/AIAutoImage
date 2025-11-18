@@ -5,6 +5,7 @@
 
 import UIKit
 import AIAutoImage
+internal import AIAutoImageCore
 
 /// A view controller that displays a single AI-enhanced product image.
 ///

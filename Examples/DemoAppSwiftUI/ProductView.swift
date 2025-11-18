@@ -5,6 +5,7 @@
 
 import SwiftUI
 import AIAutoImage
+import AIAutoImageCore
 
 /// A SwiftUI view that displays a single AI-enhanced product image.
 ///
@@ -28,34 +29,24 @@ struct ProductView: View {
     /// and navigation handling.
     var body: some View {
         VStack {
-
             /// Loads and displays the image using AIAutoImage’s ML pipeline.
             AIAsyncImage(
-                url: url,
+                            url: url,
 
-                /// A progress indicator shown while the image is loading
-                /// or being processed by the ML engine.
-                placeholder: {
-                    ProgressView().scaleEffect(1.4)
-                },
+                            // ✅ Transformations MUST come before placeholder
+                            transformations: [
+                                .backgroundRemoval,
+                                .superResolution(scale: 2.0),
+                                .autoEnhance
+                            ],
 
-                /// A set of advanced AI transformations applied sequentially.
-                transformations: [
+                            context: .detail,
 
-                    /// Removes background using semantic ML segmentation.
-                    .backgroundRemoval,
-
-                    /// Upscales the image to 2× resolution using CoreML super-resolution.
-                    .superResolution(scale: 2.0),
-
-                    /// Improves tone, contrast, clarity, and color balance.
-                    .autoEnhance
-                ],
-
-                /// Context hint indicating this image is used in a detail view,
-                /// allowing AIAutoImage to optimize quality and threading.
-                context: .detail
-            )
+                            // ✅ Placeholder must be LAST
+                            placeholder: {
+                                ProgressView().scaleEffect(1.4)
+                            }
+                        )
             .scaledToFit()               // Preserve the original aspect ratio
             .padding(.horizontal, 16)    // Add spacing from screen edges
         }

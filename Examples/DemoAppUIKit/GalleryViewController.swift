@@ -5,6 +5,7 @@
 
 import UIKit
 import AIAutoImage
+internal import AIAutoImageCore
 
 /// A view controller that displays a grid-based gallery of remote images.
 ///
@@ -165,6 +166,7 @@ class ImageCell: UICollectionViewCell {
     /// - Content-aware saliency cropping
     /// - Auto enhancement
     func configure(with url: URL) {
+                
         imageView.ai_setImage(
             url: url,
             placeholder: UIImage(systemName: "photo"),

@@ -88,6 +88,7 @@ imageView.ai_setImage(url: url)
 ```swift
 import SwiftUI
 import AIAutoImage
+internal import AIAutoImageCore
 
 struct ContentView: View {
     var body: some View {
@@ -109,6 +110,7 @@ struct ContentView: View {
 ```swift
 import UIKit
 import AIAutoImage
+internal import AIAutoImageCore
 
 class ViewController: UIViewController {
     let imageView = UIImageView()
@@ -131,29 +133,34 @@ class ViewController: UIViewController {
 
 ```swift
 import AIAutoImage
+import AIAutoImageCore
 
-let url = URL(string: "https://example.com/photo.jpg")!
-let request = AIImageRequest(url: url)
-
-Task {
-    let data = try await AIImagePipeline.shared.fetchData(for: request)
-
-    if let image = UIImage(data: data) {
-        let transformer = AITransformer()
-
-        let result = try await transformer.applyTransformations(
-            to: image,
-            using: [
-                .superResolution(scale: 2.0),
-                .autoEnhance,
-                .denoise
-            ],
-            modelManager: AIModelManager.shared
-        )
-
-        print("Transformed Image:", result)
+    let url = URL(string: "https://picsum.photos/id/1001/800/800")!
+    let request = AIImageRequest(url: url)
+    
+    Task {
+        let network = AINetwork()
+        
+        var urlRequest = URLRequest(url: url)
+        
+        let (data, _, _) = try await network.perform(urlRequest)
+        
+        if let image = UIImage(data: data) {
+            let transformer = AITransformer()
+            
+            let result = try await transformer.applyTransformations(
+                to: image,
+                using: [
+                    .superResolution(scale: 2.0),
+                    .autoEnhance,
+                    .denoise(level: 0.4)
+                ],
+                modelManager: AIModelManager.shared
+            )
+            
+            print("Transformed Image:", result)
+        }
     }
-}
 ```
 
 ## Animated Image
@@ -163,12 +170,13 @@ Task {
 ```swift
 import AIAutoImage
 import UIKit
+import AIAutoImageCore
 
 let animatedView = AIAnimatedImageView(frame: CGRect(x: 0, y: 0, width: 300, height: 220))
 
 Task {
     let data = try await AIImagePipeline.shared.fetchData(
-        for: AIImageRequest(url: URL(string: "https://example.com/sample.gif")!)
+        for: AIImageRequest(url: URL(string: "https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif")!)
     )
 
     if let anim = await AIAnimatedDecoder().decodeAnimatedImage(data: data) {

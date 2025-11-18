@@ -5,6 +5,7 @@
 
 import UIKit
 import AIAutoImage
+internal import AIAutoImageCore
 
 /// The main application delegate responsible for configuring global
 /// AIAutoImage settings and responding to key application lifecycle events.

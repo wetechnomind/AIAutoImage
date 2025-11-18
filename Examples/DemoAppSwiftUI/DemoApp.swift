@@ -5,6 +5,7 @@
 
 import SwiftUI
 import AIAutoImage
+import AIAutoImageCore
 
 /// The main entry point for the SwiftUI-based AIAutoImage demo application.
 ///

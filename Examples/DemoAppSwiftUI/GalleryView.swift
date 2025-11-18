@@ -5,6 +5,7 @@
 
 import SwiftUI
 import AIAutoImage
+import AIAutoImageCore
 
 /// A SwiftUI view that displays a grid-based gallery of remote images.
 ///
@@ -56,25 +57,24 @@ struct GalleryView: View {
                         } label: {
 
                             /// Loads and displays the thumbnail using AIAutoImage.
+                            
                             AIAsyncImage(
-                                url: url,
+                                            url: url,
 
-                                /// A placeholder while the image is loading or processing.
-                                placeholder: {
-                                    Color.gray.opacity(0.15)
-                                        .frame(height: 200)
-                                        .cornerRadius(12)
-                                },
+                                            // ✅ Transformations MUST come before placeholder
+                                            transformations: [
+                                                .backgroundRemoval,
+                                                .superResolution(scale: 2.0),
+                                                .autoEnhance
+                                            ],
 
-                                /// Lightweight transformations applied to grid thumbnails.
-                                transformations: [
-                                    .contentAwareCrop(.saliency),  // Smart subject-aware cropping
-                                    .autoEnhance                    // Basic tone + color optimization
-                                ],
+                                            context: .detail,
 
-                                /// Context hint indicating grid/list usage for optimization.
-                                context: .listItem
-                            )
+                                            // ✅ Placeholder must be LAST
+                                            placeholder: {
+                                                UIImage(systemName: "photo")
+                                            }
+                                        )
                             .frame(height: 200)
                             .cornerRadius(12)
                         }

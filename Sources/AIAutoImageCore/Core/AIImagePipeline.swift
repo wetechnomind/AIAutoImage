@@ -2,30 +2,10 @@
 //  AIImagePipeline.swift
 //  AIAutoImageCore
 //
-//  Unified AI-powered image processing pipeline.
-//
-//  Responsibilities:
-//   • Network fetch (with streaming support)
-//   • Progressive decoding using AIProgressiveDecoder
-//   • Full decode (static / animated)
-//   • Transform pipeline (resize, crop, ML transforms, filters)
-//   • Plugin transforms (custom user-defined pipeline)
-//   • Rendering + output processing
-//   • Analytics + metadata extraction
-//
-//  Stages:
-//    fetch → decode → transform → render
-//
 
 import Foundation
 import UIKit
 
-/// Represents major stages in the image pipeline.
-///
-/// Used for progress reporting through:
-/// ```swift
-/// (AIImagePipelineStage, Double) -> Void
-/// ```
 public enum AIImagePipelineStage: String, Sendable {
     case fetch
     case decode
@@ -33,63 +13,39 @@ public enum AIImagePipelineStage: String, Sendable {
     case render
 }
 
-/// Central orchestrator of all image processing stages.
-///
-/// This class wires together:
-///  - Loader (networking + streaming)
-///  - Decoder (JPEG/PNG/HEIC/WebP + animated GIF/APNG/HEIC)
-///  - Transformer (resize, crop, ML effects, LOD tuning)
-///  - Renderer (final UI-ready output)
-///  - Model Manager (CoreML model loading)
-///
-/// The pipeline supports:
-///  • Progressive decoding
-///  • Async/await concurrency
-///  • Transformation caching
-///  • Plugin-based extension
-///  • Full AI metadata extraction
+// MARK: - MainActor Snapshots
+// ---------------------------
+
+@MainActor
+private func _snapshotGlobalPipelineConfig()
+-> (enableProgressive: Bool,
+    targetDecodeSize: CGSize?,
+    analytics: AIAnalytics)
+{
+    let cfg = AIImageConfig.shared
+    return (cfg.enableProgressiveLoading,
+            cfg.targetDecodeSize,
+            AIAnalytics.shared)
+}
+    
+
+// MARK: - Pipeline
+// ----------------
+
 public final class AIImagePipeline: @unchecked Sendable {
 
-    // MARK: - Components
-    // ------------------------------------------------------------------
-
-    /// Network + data loader.
     public let loader: AILoader
-
-    /// Image format decoder (static or animated).
     public let decoder: AIDecoder
-
-    /// Transformation engine (resize, crop, filters, ML transforms).
     public let transformer: AITransformer
-
-    /// Final renderer (colorspace fix, PNG->RGB, orientation fixes).
     public let renderer: AIRenderer
-
-    /// Dedicated networking engine for advanced control.
     public let network: AINetwork
-
-    /// Global CoreML model manager.
     public let modelManager: AIModelManager
 
+    @MainActor
+    public var analytics: AIAnalytics {
+        AIAnalytics.shared
+    }
 
-    // MARK: - Init
-    // ------------------------------------------------------------------
-
-    /// Creates a new pipeline with injected components.
-    ///
-    /// You can override individual components for:
-    /// - Custom networking
-    /// - Custom decoders
-    /// - Custom transforms
-    /// - Unit testing
-    ///
-    /// - Parameters:
-    ///   - loader: Fetches remote/local image data.
-    ///   - decoder: Handles JPEG/PNG/HEIC/WebP + animated formats.
-    ///   - transformer: Applies resize + ML transforms.
-    ///   - renderer: Fixes orientation + colorspace.
-    ///   - network: Low-level networking layer.
-    ///   - modelManager: CoreML model provider.
     public init(
         loader: AILoader = AILoader(),
         decoder: AIDecoder = AIDecoder(),
@@ -106,45 +62,10 @@ public final class AIImagePipeline: @unchecked Sendable {
         self.modelManager = modelManager
     }
 
-    /// MainActor-protected analytics access.
-    @MainActor
-    public var analytics: AIAnalytics {
-        AIAnalytics.shared
-    }
+    
+    // MARK: PROCESS
+    // -------------
 
-
-    // MARK: - PROCESS
-    // ------------------------------------------------------------------
-
-    /**
-     Executes the entire image processing pipeline.
-
-     Pipeline flow:
-     1. **Fetch**
-        - Streaming or full fetch
-        - Progressive preview generation
-     2. **Decode**
-        - Static images & animated formats
-        - Target pixel downscaling
-     3. **Metadata Extraction**
-        - EXIF, IPTC, AI metadata, faces, saliency
-     4. **Transformations**
-        - Resize, crop, ML filters, LOD adjustments
-        - Transform cache lookup for performance
-     5. **Plugin Transforms**
-        - User-defined custom pipeline
-     6. **Render**
-        - Final orientation & RGB output
-     7. **Analytics**
-        - Telemetry + saliency + category logging
-
-     - Parameters:
-       - request: The structured image request (URL + transforms).
-       - sourceURL: The URL used for analytics + telemetry.
-       - progress: Optional stage progress callback.
-       - progressive: Optional callback for progressive streaming previews.
-     - Returns: A fully decoded & transformed `UIImage`.
-     */
     public func process(
         _ request: AIImageRequest,
         sourceURL: URL,
@@ -152,69 +73,70 @@ public final class AIImagePipeline: @unchecked Sendable {
         progressive: (@MainActor @Sendable (UIImage?) -> Void)? = nil
     ) async throws -> UIImage {
 
-        // Safety: ensure task wasn't cancelled
         try Task.checkCancellation()
 
-        // ------------------------------------------------------
-        // PROGRESSIVE HANDLER WRAPPER
-        // ------------------------------------------------------
+        // ------------------------------------------
+        // SNAPSHOT MAIN-ACTOR CONFIG FIRST (SAFE)
+        // ------------------------------------------
+        let (globalProgressiveEnabled,
+             globalTargetDecodeSize,
+             analytics) = await _snapshotGlobalPipelineConfig()
 
-        /// A Sendable-safe wrapper for progressive callbacks.
-        final class ProgressiveBox: @unchecked Sendable {
-            let call: (UIImage?) -> Void
-            init(_ call: @escaping (UIImage?) -> Void) { self.call = call }
-        }
+
+        // ------------------------------------------------------
+        // URLRequest (also main-actor safe)
+        // ------------------------------------------------------
+        let urlRequest = await request.makeURLRequest()
+
+
+        // ------------------------------------------------------
+        // PROGRESSIVE ENABLED?
+        // ------------------------------------------------------
+        let progressiveEnabled =
+            progressive != nil &&
+            (request.isProgressiveEnabled || globalProgressiveEnabled)
+
+
+        // Cache target size once
+        let maxPixelSizeInt: Int? = {
+            let px = request.targetPixelSize ?? globalTargetDecodeSize
+            if let px { return Int(max(px.width, px.height)) }
+            return nil
+        }()
+
 
         // ------------------------------------------------------
         // FETCH
         // ------------------------------------------------------
         progress?(.fetch, 0.0)
 
-        let urlRequest = request.makeURLRequest()
-
-        let progressiveEnabled =
-            (progressive != nil &&
-             (request.isProgressiveEnabled || AIImageConfig.shared.enableProgressiveLoading))
-
-        // Compute target max pixel size only once
-        let maxPixelSizeInt: Int? = {
-            if let sz = request.targetPixelSize {
-                return Int(max(sz.width, sz.height))
-            }
-            return nil
-        }()
-
         let data: Data
 
         if progressiveEnabled {
-
-            // STREAMING MODE
-            data = try await loader.fetchStream(request: urlRequest) { partialData, finished in
+            // STREAMING
+            data = try await loader.fetchStream(request: urlRequest) { partial, finished in
                 guard !finished else { return }
 
-                // Decode partials asynchronously
                 Task {
-                    // Ask AIProgressiveDecoder for "best" partial frame
-                    let aiBest = await AIProgressiveDecoder.shared.incrementalDecode(
-                        accumulatedData: partialData,
+                    let best = await AIProgressiveDecoder.shared.incrementalDecode(
+                        accumulatedData: partial,
                         isFinal: finished,
                         maxPixelSize: maxPixelSizeInt
                     )
 
-                    if let best = aiBest {
+                    if let best {
                         Task { @MainActor in progressive?(best) }
                         return
                     }
 
-                    // Fallback partial decode
-                    if let ui = UIImage(data: partialData) {
+                    if let ui = UIImage(data: partial) {
                         Task { @MainActor in progressive?(ui) }
                     }
                 }
             }
 
         } else {
-            // FULL FETCH MODE
+            // FULL FETCH
             data = try await loader.fetch(
                 request: urlRequest,
                 network: network,
@@ -225,6 +147,7 @@ public final class AIImagePipeline: @unchecked Sendable {
         progress?(.fetch, 1.0)
         try Task.checkCancellation()
 
+
         // ------------------------------------------------------
         // DECODE
         // ------------------------------------------------------
@@ -233,7 +156,7 @@ public final class AIImagePipeline: @unchecked Sendable {
         let decoded = try await decoder.decode(
             data,
             request: request,
-            targetPixelSize: request.targetPixelSize ?? AIImageConfig.shared.targetDecodeSize
+            targetPixelSize: request.targetPixelSize ?? globalTargetDecodeSize
         )
 
         var image = decoded.image
@@ -243,23 +166,26 @@ public final class AIImagePipeline: @unchecked Sendable {
 
 
         // ------------------------------------------------------
-        // METADATA EXTRACTION
+        // METADATA EXTRACTION + ANALYTICS
         // ------------------------------------------------------
         let metaBox = await AIImageMetadataCenter.shared.extractAll(from: image)
         await analytics.recordMetadata(for: sourceURL, metadata: metaBox)
 
         let metadataKeysSummary = metaBox.value.keys.joined(separator: ",")
 
-        // Notify plugins
-        Task {
+        let imgCopy = image   // isolate before escaping Task
+
+        Task.detached { @Sendable in
             await AIPluginManager.shared.notifyImageDecoded(
-                UIImage(),
+                imgCopy,
                 context: ["metadata_keys": metadataKeysSummary]
             )
         }
 
+
+
         // ------------------------------------------------------
-        // TRANSFORMATIONS + TRANSFORM CACHE
+        // TRANSFORMATIONS + CACHE
         // ------------------------------------------------------
         if !request.transformations.isEmpty {
             progress?(.transform, 0.0)
@@ -290,7 +216,7 @@ public final class AIImagePipeline: @unchecked Sendable {
 
 
         // ------------------------------------------------------
-        // PLUGIN PIPELINE (after built-in transforms)
+        // PLUGIN PIPELINE
         // ------------------------------------------------------
         image = await AITransformPipeline.shared.applyAll(to: image)
 
@@ -307,7 +233,7 @@ public final class AIImagePipeline: @unchecked Sendable {
 
 
         // ------------------------------------------------------
-        // ANALYTICS + TELEMETRY
+        // ANALYTICS FINAL
         // ------------------------------------------------------
         await analytics.recordPipelineCompletion(
             url: sourceURL,
@@ -319,12 +245,7 @@ public final class AIImagePipeline: @unchecked Sendable {
     }
 
 
-    // MARK: - CANCEL
-    // ------------------------------------------------------------------
-
-    /// Cancels any in-flight network operation for the specified URL.
-    ///
-    /// This forcibly cancels loaders, but does not affect transformed results.
+    // MARK: CANCEL
     public func cancel(_ url: URL) {
         Task { await loader.cancel(url) }
     }

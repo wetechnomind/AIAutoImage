@@ -69,7 +69,7 @@ public actor AILoader {
         let finalRequest = await rewriteRequestIfBetterCDN(request)
 
         // Auto-escalate to streaming if progressive is enabled
-        if config.enableProgressiveLoading ||
+        if await config.enableProgressiveLoading ||
             (request.value(forHTTPHeaderField: "X-AI-Progressive") == "1")
         {
             return try await fetchStream(request: finalRequest) { _, _ in }
@@ -254,7 +254,7 @@ public actor AILoader {
         let latency = await predictLatency(for: host)
 
         if latency < 0.35,
-           let provider = AIImageConfig.shared.cdnProvider,
+           let provider = await AIImageConfig.shared.cdnProvider,
            let better = await provider.bestAlternative(for: url)
         {
             var modified = req

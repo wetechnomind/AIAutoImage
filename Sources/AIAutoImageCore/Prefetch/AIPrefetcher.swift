@@ -171,7 +171,7 @@ public actor AIPrefetcher: Sendable {
     ///   - session: URL session used for network calls.
     private func prefetchOne(_ request: AIImageRequest, session: URLSession) async {
         let req = request
-        let urlReq = req.makeURLRequest()
+        let urlReq = await req.makeURLRequest()
 
         do {
             let (_, _) = try await session.data(for: urlReq)

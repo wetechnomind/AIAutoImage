@@ -3,34 +3,34 @@
 //  AIAutoImage
 //
 //  Global configuration for the AIAutoImage framework.
-//  This file controls performance, quality presets, CDN rules,
-//  caching limits, AI features, telemetry, accessibility, and more.
+//  Controls performance, quality, caching, networking, CDN rules,
+//  AI features, telemetry, accessibility, and more.
 //
 
 import Foundation
 import CoreGraphics
+
+#if canImport(UIKit)
 import UIKit
+#endif
 
 // MARK: - CDN Provider Protocol
 // ----------------------------------------------------------------------
 
-/// A protocol defining a pluggable CDN provider.
+/// A protocol defining a modular CDN provider.
 ///
-/// Implement this to dynamically rewrite image URLs at runtime,
-/// enabling:
+/// Implement this to dynamically rewrite image URLs at runtime.
+///
+/// Useful for:
 /// - Smart multi-CDN routing
-/// - Geo-optimized delivery
-/// - Model-driven URL selection
-///
-/// Returning `nil` indicates no override.
+/// - Regional edge server selection
+/// - AB testing between CDNs
+/// - AI-driven URL rewriting
 public protocol AICDNProvider: Sendable {
-    /// Returns an alternative URL for the given original URL.
-    /// - Parameter original: The initial requested image URL.
-    /// - Returns: A rewritten CDN URL, or `nil` if no override should occur.
     func bestAlternative(for original: URL) async -> URL?
 }
 
-/// Default provider that performs **no CDN routing**.
+/// Default provider that performs **no CDN rewriting**.
 public struct DefaultCDNProvider: AICDNProvider {
     public init() {}
     public func bestAlternative(for original: URL) async -> URL? { nil }
@@ -40,41 +40,28 @@ public struct DefaultCDNProvider: AICDNProvider {
 // MARK: - Performance Mode
 // ----------------------------------------------------------------------
 
-/// Controls the engine’s performance vs. battery tradeoffs.
-///
-/// Affects decoder behavior, ML usage, threading, and power optimizations.
+/// Controls decoder performance, threading, and ML cost.
 public enum AIPerformanceMode: Sendable {
-    /// Use fewer AI features and background resources.
-    case batterySaving
-
-    /// Balanced performance (default).
-    case balanced
-
-    /// Maximum performance mode — more threads, more AI.
-    case highPerformance
+    case batterySaving      // Low power usage
+    case balanced           // Best mix of speed + battery
+    case highPerformance    // Max threads, full AI
 }
 
 
 // MARK: - Quality Presets
 // ----------------------------------------------------------------------
 
-/// Friendly global presets that auto-adjust multiple quality parameters.
+/// High-level presets that configure internal parameters.
 public enum AIQualityPreset: Sendable {
-    /// Fastest decode path, minimal AI, JPEG preferred.
-    case ultraFast
-
-    /// Balanced quality/performance (default).
-    case balanced
-
-    /// High-quality images, advanced formats (HEIC), full AI.
-    case highQuality
+    case ultraFast   // Minimal AI, downscaled decoding
+    case balanced    // Default
+    case highQuality // Full AI, HEIC preferred
 }
 
 
-// MARK: - Preferred Output Format
+// MARK: - Preferred Output File Format
 // ----------------------------------------------------------------------
 
-/// Preferred storage format for encoded images on disk.
 public enum AIPreferredFormat: Sendable {
     case auto
     case jpeg
@@ -88,22 +75,22 @@ public enum AIPreferredFormat: Sendable {
 // MARK: - Global Configuration
 // ----------------------------------------------------------------------
 
-/// Global configuration object controlling all AIAutoImage behavior.
+/// The global configuration for AIAutoImage.
 ///
-/// Accessed via:
+/// Access via:
 /// ```swift
-/// AIImageConfig.shared
+/// let cfg = AIImageConfig.shared
+/// cfg.performanceMode = .balanced
 /// ```
 ///
-/// You can customize decoding, caching, AI usage, progressive loading,
-/// networking rules, and more.
+/// ⚠️ This object is **not thread-safe**.
+/// Modify only at app startup (usually AppDelegate/SceneDelegate).
 ///
-/// The configuration is **not thread-safe by design** — it is intended
-/// to be mutated at app startup on the main thread.
-public final class AIImageConfig: @unchecked Sendable {
+@MainActor
+public final class AIImageConfig {
 
-    // MARK: - Singleton
-    /// Shared global instance of configuration.
+    // MARK: Singleton
+
     public static let shared = AIImageConfig()
 
     private init() {
@@ -111,117 +98,111 @@ public final class AIImageConfig: @unchecked Sendable {
     }
 
 
-    // MARK: - Performance Settings
+    // MARK: - Performance
     // ------------------------------------------------------------------
 
-    /// Controls global performance policy for the engine.
+    /// Controls overall processing speed and thread usage.
     public var performanceMode: AIPerformanceMode = .balanced
 
 
-    // MARK: - Quality Settings
+    // MARK: - Quality
     // ------------------------------------------------------------------
 
-    /// High-level preset that automatically adjusts multiple parameters.
+    /// Easy preset that adjusts multiple parameters together.
     public var preset: AIQualityPreset = .balanced {
         didSet { applyPreset(preset) }
     }
 
-    /// Preferred output format for disk-encoded images.
+    /// Preferred format for **encoded disk output**.
     public var preferredFormat: AIPreferredFormat = .auto
 
-    /// Optional target decode size (downscales at decode time)
-    /// — Useful for performance presets.
+    /// Optional downscale target to speed up decoding and reduce memory.
     public var targetDecodeSize: CGSize? = nil
 
 
     // MARK: - Networking
     // ------------------------------------------------------------------
 
-    /// Allows modifying URL requests globally (headers, tokens, etc).
     /// Called before every network request.
+    ///
+    /// Useful for API keys, tokens, headers, AB testing, etc.
     public var requestModifier: ((inout URLRequest) -> Void)? = nil
 
-    /// Timeout for network image fetch requests.
+    /// Fetch timeout for all image downloads.
     public var networkTimeout: TimeInterval = 20.0
 
-    /// Enables intelligent CDN routing via AI/ML-based selection.
+    /// Enables global CDN routing.
     public var enableSmartCDNRouting: Bool = false
 
-    /// The active CDN provider being used for URL rewriting.
+    /// Custom CDN provider.
     public var cdnProvider: AICDNProvider? = DefaultCDNProvider()
 
 
-    // MARK: - Caching
+    // MARK: - Caching (Memory + Disk)
     // ------------------------------------------------------------------
 
-    /// Total memory allocated for the main image cache.
-    public var memoryCacheTotalCost: Int = 64 * 1024 * 1024  // 64 MB
+    /// Maximum memory used by image cache.
+    public var memoryCacheTotalCost: Int = 64 * 1024 * 1024 // 64 MB
 
-    /// Maximum disk storage for the AIAutoImage disk cache.
-    public var diskCacheLimit: Int = 300 * 1024 * 1024        // 300 MB
+    /// Maximum disk cache size.
+    public var diskCacheLimit: Int = 300 * 1024 * 1024 // 300 MB
 
-    /// Maximum RAM used by CoreML models.
-    public var modelMemoryLimit: Int = 200 * 1024 * 1024       // 200 MB
+    /// Maximum RAM allowed for ML models.
+    public var modelMemoryLimit: Int = 200 * 1024 * 1024 // 200 MB
 
 
     // MARK: - AI / CoreML
     // ------------------------------------------------------------------
 
-    /// Enables all AI-powered enhancements (sharpness, ML filters, etc).
+    /// Enables ML filters, enhancement, scoring, etc.
     public var enableAIFeatures: Bool = true
 
-    /// Restricts ML to **on-device-only** models (no remote ML).
+    /// Restricts ML to on-device only.
     public var restrictModelsToOnDevice: Bool = true
 
 
     // MARK: - Accessibility
     // ------------------------------------------------------------------
 
-    /// Enables AI auto-captioning and object-based accessibility labels.
+    /// Enables auto-captioning + semantic labeling.
     public var enableAIAccessibility: Bool = false
 
 
-    // MARK: - Telemetry / Analytics
+    // MARK: - Telemetry
     // ------------------------------------------------------------------
 
-    /// Enables anonymous telemetry events for performance tuning.
+    /// Enables anonymous performance telemetry.
     public var telemetryEnabled: Bool = false
 
-    /// Server endpoint for telemetry uploads.
+    /// Endpoint for telemetry submission.
     public var telemetryEndpoint: URL? = nil
 
 
     // MARK: - Debugging
     // ------------------------------------------------------------------
 
-    /// Enables verbose internal logging.
+    /// Verbose internal logging.
     public var enableDebugLogs: Bool = false
 
-    /// Enables performance metrics for decoder + pipeline stages.
+    /// Enables detailed performance profiling.
     public var enablePerformanceMetrics: Bool = false
 
 
-    // MARK: - Progressive Loading
+    // MARK: - Progressive Decoding
     // ------------------------------------------------------------------
 
-    /// Enables progressive (partial) decoding + rendering.
-    ///
-    /// When enabled:
-    /// - The loader streams partial JPEG chunks
-    /// - Decoder reconstructs intermediate images
-    /// - UI gets incremental previews
+    /// Enables incremental decode & render (JPEG progressive streaming).
     public var enableProgressiveLoading: Bool = false
 
 
     // MARK: - Preset Logic
     // ------------------------------------------------------------------
 
-    /// Applies preset rules to multiple related settings.
+    /// Internal preset rules.
     private func applyPreset(_ preset: AIQualityPreset) {
         switch preset {
 
         case .ultraFast:
-            // Downscale aggressively for speed
             targetDecodeSize = CGSize(width: 800, height: 800)
             preferredFormat = .jpeg
             enableAIFeatures = false

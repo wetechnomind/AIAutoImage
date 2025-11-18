@@ -144,7 +144,7 @@ public final class AIRenderer: @unchecked Sendable {
         }
 
         // 3. AI ML-driven sharpening
-        if AIImageConfig.shared.preset == .highQuality {
+        if await AIImageConfig.shared.preset == .highQuality {
             ci = await applyAIMLSharpen(ci)
         }
 

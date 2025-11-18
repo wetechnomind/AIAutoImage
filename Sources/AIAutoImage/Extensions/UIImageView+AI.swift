@@ -85,40 +85,47 @@ public extension UIImageView {
     /// imageView.ai_setImage(with: url, request: req)
     /// ```
     func ai_setImage(
-        with url: URL,
+        url: URL,
         placeholder: UIImage? = nil,
-        request: AIImageRequest? = nil
+        transformations: [AITransformation] = [],
+        context: AIRequestContext = .normal
     ) {
-        // Display placeholder
-        if let ph = placeholder { self.image = ph }
+        // Show placeholder if any
+        if let ph = placeholder {
+            self.image = ph
+        }
 
-        // Cancel any ongoing load tied to this view
+        // Cancel previous load
         ai_cancelLoad()
 
-        // Track URL for cell-reuse / async safety
+        // Track new URL
         ai_setCurrentURL(url)
 
-        // Build default request if none provided
-        let req = request ?? AIImageRequest(url: url)
+        // Build request
+        let request = AIImageRequest(
+            url: url,
+            transformations: transformations,
+            context: context
+        )
 
-        // Perform async load
+        // Run async pipeline
         Task { [weak self] in
             guard let self else { return }
 
             do {
-                let image = try await AIAutoImage.shared.image(for: req)
+                let image = try await AIAutoImage.shared.image(for: request)
 
-                // Ensure URL hasn't changed (important for reusable cells)
+                // Ensure URL still matches (cell reuse safety)
                 if self.ai_currentURL == url {
                     self.image = image
                 }
 
             } catch {
-                // Log error from correct actor
-                await AILog.shared.error("ai_setImage failed: \(error.localizedDescription)")
+                await AILog.shared.error("ai_setImage(url:) failed: \(error.localizedDescription)")
             }
         }
     }
+
 
     // MARK: - Cancellation
 

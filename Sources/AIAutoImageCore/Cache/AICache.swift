@@ -69,25 +69,37 @@ public actor AICache {
     private var memoryKeys = Set<String>()
 
     /// Memory cost limit (in bytes).
-    private var memoryCostLimit: Int { AIImageConfig.shared.memoryCacheTotalCost }
+    /// Memory limit captured once at initialization (Sendable-safe)
+    private var memoryCostLimit: Int
 
-    /// Disk cache limit (in bytes).
-    private var diskCostLimit: Int { AIImageConfig.shared.diskCacheLimit }
-
+    /// Disk limit captured once at initialization (Sendable-safe)
+    private var diskCostLimit: Int
 
     // MARK: - Initialization
-    // ---------------------------------------------------------------------
-
-    /// Creates memory + disk caches and ensures the disk directory exists.
     private init() {
-        memory.totalCostLimit = AIImageConfig.shared.memoryCacheTotalCost
+        // temporary safe defaults so initializer does not crash
+        self.memoryCostLimit = 64 * 1024 * 1024
+        self.diskCostLimit = 300 * 1024 * 1024
 
         let caches = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         let dir = caches.appendingPathComponent("AIAutoImageCache", isDirectory: true)
-
         try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
         self.diskDirectory = dir
     }
+    /// MUST be called once during startup
+    public func configureFromMainActor() async {
+        let (mem, disk) = await MainActor.run {
+            (
+                AIImageConfig.shared.memoryCacheTotalCost,
+                AIImageConfig.shared.diskCacheLimit
+            )
+        }
+
+        self.memoryCostLimit = mem
+        self.diskCostLimit = disk
+        memory.totalCostLimit = mem
+    }
+
 
 
     // MARK: - Memory Cache API

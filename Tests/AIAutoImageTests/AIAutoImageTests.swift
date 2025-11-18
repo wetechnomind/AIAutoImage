@@ -43,34 +43,30 @@ final class AIAutoImageTests: XCTestCase {
 
     // MARK: - Configuration Tests
 
-    func testConfigDefaults() {
-        let cfg = AIImageConfig.shared
+    func testPresetSwitchingBehavior() async {
+        let cfg = await MainActor.run { AIImageConfig.shared }
 
-        XCTAssertNotNil(cfg) // instance exists
-        // performanceMode default likely .balanced — assert it's settable and readable
-        XCTAssertNotNil(cfg.performanceMode)
-        // ensure ai features boolean present
-        XCTAssertNotNil(cfg.enableAIFeatures)
-    }
+        // read original preset on MainActor
+        let original = await MainActor.run { cfg.preset }
 
-    func testPresetSwitchingBehavior() {
-        let cfg = AIImageConfig.shared
+        // ultraFast preset
+        await MainActor.run { cfg.preset = .ultraFast }
+        let fmtUltra = await MainActor.run { cfg.preferredFormat }
+        let aiUltra  = await MainActor.run { cfg.enableAIFeatures }
 
-        // store original
-        let original = cfg.preset
+        XCTAssertEqual(fmtUltra, .jpeg)
+        XCTAssertFalse(aiUltra)
 
-        // Test ultraFast preset
-        cfg.preset = .ultraFast
-        XCTAssertEqual(cfg.preferredFormat, .jpeg)
-        XCTAssertFalse(cfg.enableAIFeatures)
+        // highQuality preset
+        await MainActor.run { cfg.preset = .highQuality }
+        let fmtHQ = await MainActor.run { cfg.preferredFormat }
+        let aiHQ  = await MainActor.run { cfg.enableAIFeatures }
 
-        // Test highQuality preset
-        cfg.preset = .highQuality
-        XCTAssertEqual(cfg.preferredFormat, .heic)
-        XCTAssertTrue(cfg.enableAIFeatures)
+        XCTAssertEqual(fmtHQ, .heic)
+        XCTAssertTrue(aiHQ)
 
-        // restore original
-        cfg.preset = original
+        // restore
+        await MainActor.run { cfg.preset = original }
     }
 
     // MARK: - Cache Tests
@@ -418,11 +414,13 @@ final class AIAutoImageTests: XCTestCase {
         let view = UIImageView()
         let url = tempURL("uiview-test")
 
-        var req = AIImageRequest(url: url)
-        req.transformations = [.autoEnhance]
+        view.ai_setImage(
+            url: url,
+            placeholder: nil,
+            transformations: [.autoEnhance],
+            context: .normal
+        )
 
-        // ai_setImage API may be async; call and assert no crashes
-        view.ai_setImage(with: url, placeholder: nil, request: req)
         XCTAssertTrue(true)
     }
 

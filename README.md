@@ -1,11 +1,11 @@
 
-<img width="1366" height="524" alt="ChatGPT Image Nov 18, 2025, 12_55_06 PM" src="https://github.com/user-attachments/assets/2f3c8faa-04ba-4cca-b6ee-b6e819603d67" />
+<img width="1366" height="524" alt="img new" src="https://github.com/user-attachments/assets/cf122e76-3e7c-4931-8249-5bcf990fba39" />
 
 # AIAutoImage — The Next-Gen AI Image Pipeline for iOS
 
 ![AIAutoImage](https://img.shields.io/badge/AIAutoImage-Next--Gen%20AI%20Image%20Pipeline%20for%20iOS-red)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?style=flat-square)
-![SPM Release](https://img.shields.io/github/v/release/Dhiiren/AIAutoImage?label=SPM&color=blue&style=flat-square)
+![SPM Release](https://img.shields.io/github/v/release/WeTechnoMind/AIAutoImage?label=SPM&color=blue&style=flat-square)
 ![Platform iOS](https://img.shields.io/badge/platform-iOS%2015%2B-blue?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![Swift Package Manager](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-orange?logo=swift)
@@ -42,7 +42,7 @@ You can install it using **Swift Package Manager** directly from GitHub.
 1. Open **Xcode > File > Add Packages…**
 2. Enter the repository URL:
    ```swift
-   https://github.com/yourname/AIAutoImage.git
+   https://github.com/WeTechnoMind/AIAutoImage.git
    ```
    
 3. Select **Version: 1.0.0**
@@ -56,7 +56,7 @@ If you’re using SPM manually:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/yourname/AIAutoImage.git", from: "1.0.0")
+    .package(url: "https://github.com/WeTechnoMind/AIAutoImage.git", from: "1.0.0")
 ]
  ```
 ## Quick Start
@@ -250,7 +250,8 @@ Whether it's bug reports, feature requests, performance improvements, or documen
 
 All source code is licensed under the [MIT License](https://github.com/SDWebImage/SDWebImage/blob/master/LICENSE).
 
+---
 
+##  High Level Diagram
 
-
-
+<img width="1024" height="1536" alt="High Level Diagram" src="https://github.com/user-attachments/assets/086f74b7-25fd-4ccb-b246-6668b43ff8f9" />
